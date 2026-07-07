@@ -11,6 +11,12 @@ faiss_index/
 test_results/
 medical_articles/
 
+# LoRA fine-tuning artifacts (generated)
+lora_finetune/data/
+lora_finetune/adapter/
+lora_finetune/merged_model/
+lora_finetune/**/checkpoint-*/
+
 # Common binary artifacts
 *.faiss
 *.pkl
