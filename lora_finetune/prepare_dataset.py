@@ -71,7 +71,7 @@ def main():
 
     examples = build_examples(tokenizer)
     if not examples:
-        print("No examples generated - check ANTHROPIC_API_KEY/OPENAI_API_KEY and faiss_index/.")
+        print("No examples generated - check ANTHROPIC_API_KEY and faiss_index/.")
         return
 
     random.Random(cfg.seed).shuffle(examples)

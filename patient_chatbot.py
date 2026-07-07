@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -258,9 +258,11 @@ class PatientChatbot:
 # MAIN
 # ============================================================================
 
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
 def load_vectorstore(persist_directory: str = "./faiss_index"):
     print(f"Loading vector store from {persist_directory}...")
-    embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vectorstore = FAISS.load_local(
         persist_directory, 
         embeddings, 

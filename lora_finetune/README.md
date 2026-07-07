@@ -55,8 +55,9 @@ eval pass should each finish in well under an hour once a GPU is assigned.
 
 ## Steps
 
-1. **Build the training data** (needs `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-   and an existing `faiss_index/` — run `rag_setup.py` first if missing):
+1. **Build the training data** (needs `ANTHROPIC_API_KEY` and an existing
+   `faiss_index/` — run `rag_setup.py` first if missing; embeddings run
+   locally, no OpenAI key needed):
    ```bash
    python lora_finetune/prepare_dataset.py
    ```

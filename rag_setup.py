@@ -16,7 +16,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 # Suppress warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -27,6 +27,7 @@ load_dotenv()
 # Configuration
 DOCUMENTS_FOLDER = "./documents"
 FAISS_INDEX_PATH = "./faiss_index"
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -103,8 +104,8 @@ def create_vectorstore(force_rebuild=False):
     print("RAG Vectorstore Setup")
     print("="*60 + "\n")
     
-    embeddings = OpenAIEmbeddings()
-    
+    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
     if Path(FAISS_INDEX_PATH).exists() and not force_rebuild:
         print(f"Vectorstore already exists at {FAISS_INDEX_PATH}")
         response = input("Rebuild from scratch? (y/n): ").strip().lower()
