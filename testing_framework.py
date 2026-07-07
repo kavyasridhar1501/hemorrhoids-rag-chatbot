@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from pathlib import Path
-from google import genai
+import anthropic
 
 load_dotenv()
 
@@ -361,14 +361,12 @@ class PatientForumScraper:
 
 class LLMJudgeEvaluator:
     """
-    Uses Gemini (free tier via Google AI Studio) to evaluate chatbot responses
-    with detailed chain-of-thought reasoning
+    Uses Claude to evaluate chatbot responses with detailed chain-of-thought reasoning
     """
-
+    
     def __init__(self):
-        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        self.judge_model = "gemini-2.5-flash"
-
+        self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        
         self.evaluation_prompt = """You are an expert medical evaluator assessing AI-generated responses for a patient-facing hemorrhoid and constipation management chatbot.
 
 Your task is to evaluate the chatbot's response using chain-of-thought reasoning across multiple dimensions.
@@ -466,16 +464,22 @@ Be thorough in your reasoning and specific in identifying issues."""
         print(f"\nEvaluating response to: {question[:100]}...")
         
         try:
-            result = self.client.models.generate_content(
-                model=self.judge_model,
-                contents=self.evaluation_prompt.format(
-                    question=question,
-                    response=response
-                )
+            message = self.client.messages.create(
+                model="claude-sonnet-5",
+                max_tokens=4000,
+                messages=[{
+                    "role": "user",
+                    "content": self.evaluation_prompt.format(
+                        question=question,
+                        response=response
+                    )
+                }]
             )
-
-            response_text = result.text
-
+            
+            # Extract JSON from response - content[0] may be a ThinkingBlock,
+            # so find the actual text block rather than assuming position 0
+            response_text = next(block.text for block in message.content if block.type == "text")
+            
             # Find JSON in markdown code blocks
             import re
             json_match = re.search(r'```json\n(.*?)\n```', response_text, re.DOTALL)

@@ -7,22 +7,13 @@ implementation, not a restoration.
 
 ## Approach
 `patient_chatbot.py` already produces safety-first, patient-friendly,
-RAG-grounded answers. Instead of hand-labeling a new dataset,
+RAG-grounded answers via Claude. Instead of hand-labeling a new dataset,
 `prepare_dataset.py` distills those answers into instruction/response pairs
 and uses them to fine-tune `m42-health/Llama3-Med42-8B` with LoRA, so the
-adapter learns to imitate the teacher's tone, safety behavior, and red-flag
+adapter learns to imitate Claude's tone, safety behavior, and red-flag
 handling on top of Med42's medical domain knowledge. The result is then
-scored against the un-tuned base model with the same LLM-as-judge
+scored against the un-tuned base model with the same Claude LLM-as-judge
 (`testing_framework.LLMJudgeEvaluator`) used by `test_runner.py`.
-
-**Model note:** the production chatbot (`python patient_chatbot.py`) still
-defaults to Claude, matching the rest of this repo. The LoRA pipeline
-scripts (`generate_questions.py`, `prepare_dataset.py`,
-`testing_framework.LLMJudgeEvaluator`) use **Gemini** (`gemini-2.5-flash`,
-free tier via Google AI Studio) instead, so generating a larger training
-set and running repeated evaluations doesn't cost anything. Set
-`GEMINI_API_KEY` (get one at https://aistudio.google.com/apikey, no card
-required) rather than relying on `ANTHROPIC_API_KEY` for these scripts.
 
 ## Requirements
 Needs a CUDA GPU with roughly 16GB+ VRAM (Med42-8B in 4-bit plus the LoRA
@@ -74,14 +65,13 @@ would contaminate the comparison.
 1. **(Optional but recommended) Generate more training questions** — the
    scraped `test_data/*.json` files alone are a small pool (~20 questions
    after dedup), which isn't enough to meaningfully fine-tune an 8B model.
-   This calls Gemini (free tier) to generate ~150+ additional diverse
-   synthetic patient questions across categories, written to
-   `test_data/synthetic_test_cases.json`:
+   This calls Claude to generate ~150+ additional diverse synthetic patient
+   questions across categories, written to `test_data/synthetic_test_cases.json`:
    ```bash
    python lora_finetune/generate_questions.py
    ```
 
-2. **Build the training data** (needs `GEMINI_API_KEY` and an existing
+2. **Build the training data** (needs `ANTHROPIC_API_KEY` and an existing
    `faiss_index/` — run `rag_setup.py` first if missing; embeddings run
    locally, no OpenAI key needed):
    ```bash
