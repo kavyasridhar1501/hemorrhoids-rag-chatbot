@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# OS/editor
+.DS_Store
+*.swp
+
+# Data / indexes / outputs (generated or large)
+documents/
+faiss_index/
+test_results/
+medical_articles/
+
+# Common binary artifacts
+*.faiss
+*.pkl
+*.bin
+*.dat
+*.idx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
