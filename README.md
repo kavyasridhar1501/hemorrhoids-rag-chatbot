@@ -128,6 +128,7 @@ Key findings:
 - `faiss_index/`: persisted vectorstore (generated)
 - `test_data/` and `test_results/`: inputs and outputs for evaluation
 - `integrations/supabase_utils.py`: optional patient context integration
+- `lora_finetune/`: LoRA fine-tuning pipeline for Med42-8B (see its own README)
 
 ## Notes
-- We previously explored LoRA fine-tuning but did not use it in this repo; the `lora_finetune/` folder has been removed to keep the project focused on RAG with Claude and Med42-8B comparisons.
+- LoRA fine-tuning of Med42-8B lives in `lora_finetune/`. It fine-tunes on answers distilled from the Claude + RAG chatbot and evaluates against the base model using the same LLM-as-judge as the rest of this repo. See `lora_finetune/README.md` for setup and status — it has not yet been run on GPU hardware, so no results are reported here yet.
