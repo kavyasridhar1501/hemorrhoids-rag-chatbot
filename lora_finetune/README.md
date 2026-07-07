@@ -53,9 +53,25 @@ given how small this project's dataset is (the curated + scraped test
 cases, well under a thousand examples), a few epochs of training and the
 eval pass should each finish in well under an hour once a GPU is assigned.
 
+## Train/eval separation
+`evaluate_lora.py` scores against `TestCaseGenerator.get_curated_test_cases()`
+(16 hand-written questions). `prepare_dataset.py` deliberately excludes that
+same set from training data — training only draws from the scraped/synthetic
+`test_data/*.json` files. Don't add the curated cases back into training; that
+would contaminate the comparison.
+
 ## Steps
 
-1. **Build the training data** (needs `ANTHROPIC_API_KEY` and an existing
+1. **(Optional but recommended) Generate more training questions** — the
+   scraped `test_data/*.json` files alone are a small pool (~20 questions
+   after dedup), which isn't enough to meaningfully fine-tune an 8B model.
+   This calls Claude to generate ~150+ additional diverse synthetic patient
+   questions across categories, written to `test_data/synthetic_test_cases.json`:
+   ```bash
+   python lora_finetune/generate_questions.py
+   ```
+
+2. **Build the training data** (needs `ANTHROPIC_API_KEY` and an existing
    `faiss_index/` — run `rag_setup.py` first if missing; embeddings run
    locally, no OpenAI key needed):
    ```bash
@@ -63,21 +79,23 @@ eval pass should each finish in well under an hour once a GPU is assigned.
    ```
    Writes `lora_finetune/data/train.jsonl` and `val.jsonl`.
 
-2. **Fine-tune**:
+3. **Fine-tune**:
    ```bash
    python lora_finetune/train_lora.py
    ```
    Saves the adapter to `lora_finetune/adapter/`. Hyperparameters live in
-   `lora_finetune/config.py`.
+   `lora_finetune/config.py`. With only ~30-40 training examples this works
+   out to single-digit total optimizer steps, too few for the adapter to
+   learn anything reliable — step 1 above exists specifically to fix that.
 
-3. **Evaluate base vs. LoRA**:
+4. **Evaluate base vs. LoRA**:
    ```bash
    python lora_finetune/evaluate_lora.py
    ```
    Writes `test_results/lora_vs_base_results.json` with per-dimension
    scores, pass rates, and the base-vs-LoRA delta.
 
-4. **(Optional) Merge for deployment**:
+5. **(Optional) Merge for deployment**:
    ```bash
    python lora_finetune/merge_adapter.py
    ```
@@ -86,7 +104,11 @@ eval pass should each finish in well under an hour once a GPU is assigned.
    Med42-8B is served elsewhere in this project.
 
 ## Status
-No metrics yet — this needs to run on GPU hardware first. Once it has,
-replace this section (and the note in the top-level README) with the
-actual pass rates / dimension scores from
-`test_results/lora_vs_base_results.json`.
+First full run (34 train / 4 val examples, 3 epochs, ~9 optimizer steps
+total) completed but was inconclusive: LoRA scored within ~1 point of the
+base model (71.6% vs 70.8%, identical 12.5% pass rate) — a difference small
+enough to be judge noise rather than a real effect, consistent with too few
+training steps to move an 8B model's behavior. That run also predates the
+train/eval separation fix above, so its result shouldn't be trusted even
+as a null result. A re-run with the synthetic question set from step 1 is
+the next step before drawing any conclusion.

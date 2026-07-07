@@ -197,4 +197,4 @@ Key findings:
 - `lora_finetune/`: LoRA fine-tuning pipeline for Med42-8B (see its own README)
 
 ## Notes
-- LoRA fine-tuning of Med42-8B lives in `lora_finetune/`. It fine-tunes on answers distilled from the Claude + RAG chatbot and evaluates against the base model using the same LLM-as-judge as the rest of this repo. See `lora_finetune/README.md` for setup and status — it has not yet been run on GPU hardware, so no results are reported here yet.
+- LoRA fine-tuning of Med42-8B lives in `lora_finetune/`. It fine-tunes on answers distilled from the Claude + RAG chatbot and evaluates against the base model using the same LLM-as-judge as the rest of this repo. A first run (34 training examples) showed no statistically meaningful difference from the base model, consistent with too little training data to move an 8B model's behavior. See `lora_finetune/README.md` for the full status and the plan to scale up the training set before drawing a conclusion.
