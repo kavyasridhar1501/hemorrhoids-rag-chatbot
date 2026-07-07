@@ -62,6 +62,14 @@ would contaminate the comparison.
 
 ## Steps
 
+Run the whole sequence below in one command with:
+```bash
+python lora_finetune/run_pipeline.py
+```
+It skips the vectorstore build if `faiss_index/` already exists, and stops
+with a clear error if any step fails. Or run the steps individually if you
+want more control:
+
 1. **(Optional but recommended) Generate more training questions** — the
    scraped `test_data/*.json` files alone are a small pool (~20 questions
    after dedup), which isn't enough to meaningfully fine-tune an 8B model.
@@ -110,5 +118,11 @@ base model (71.6% vs 70.8%, identical 12.5% pass rate) — a difference small
 enough to be judge noise rather than a real effect, consistent with too few
 training steps to move an 8B model's behavior. That run also predates the
 train/eval separation fix above, so its result shouldn't be trusted even
-as a null result. A re-run with the synthetic question set from step 1 is
-the next step before drawing any conclusion.
+as a null result.
+
+A follow-up run generated 156 synthetic questions (step 1) to scale up the
+training set, but the training/evaluation steps after that weren't
+confirmed to complete cleanly - re-run `python lora_finetune/run_pipeline.py`
+end to end and check `test_results/lora_vs_base_results.json` for a result
+that can actually be attributed to the larger dataset before reporting a
+number anywhere.
