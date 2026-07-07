@@ -3,8 +3,11 @@ LoRA fine-tuning of Med42-8B on the distilled patient Q&A pairs from
 prepare_dataset.py. Requires a CUDA GPU (bitsandbytes 4-bit quantization).
 """
 import json
+import os
 from pathlib import Path
 from typing import List
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from datasets import Dataset
 from transformers import (
