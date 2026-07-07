@@ -8,11 +8,13 @@ A patient-friendly RAG chatbot focused on hemorrhoids and constipation. It provi
 - Persistent conversation memory across sessions
 - Evaluation framework with both LLM-as-judge and human/doctor review
 - Local FAISS vectorstore; documents live in `documents/`
+- LoRA fine-tuning of Med42-8B, distilled from the Claude + RAG chatbot and benchmarked against the base model (`lora_finetune/`)
 
 ### Tech Stack
-- LLM: Claude (primary); Med42-8B via Ollama for comparison
+- LLM: Claude (primary); Med42-8B via Ollama for comparison, and as a LoRA fine-tuning target
 - RAG: LangChain + FAISS + local HuggingFace embeddings (`sentence-transformers/all-MiniLM-L6-v2`, no API key/cost)
 - Evaluation: Custom test runner, LLM-as-judge (Claude), optional human/doctor scoring
+- Fine-tuning: 4-bit QLoRA (`peft` + `bitsandbytes`) on `m42-health/Llama3-Med42-8B`
 
 ---
 
@@ -46,6 +48,17 @@ This creates `faiss_index/` used at runtime.
 python patient_chatbot.py
 ```
 - If the vectorstore is missing, run `rag_setup.py` first.
+
+### 5) (Optional) Fine-tune Med42-8B with LoRA
+Distills the chatbot's answers into a training set and fine-tunes
+`m42-health/Llama3-Med42-8B` with LoRA, then benchmarks it against the base
+model. Needs a CUDA GPU (a free-tier Colab T4 is enough):
+```bash
+python lora_finetune/run_pipeline.py
+```
+Runs the full sequence end to end. See `lora_finetune/README.md` for the
+individual steps, hyperparameters, and current results if you'd rather run
+it piece by piece.
 
 ---
 
@@ -194,7 +207,4 @@ Key findings:
 - `faiss_index/`: persisted vectorstore (generated)
 - `test_data/` and `test_results/`: inputs and outputs for evaluation
 - `integrations/supabase_utils.py`: optional patient context integration
-- `lora_finetune/`: LoRA fine-tuning pipeline for Med42-8B (see its own README)
-
-## Notes
-- LoRA fine-tuning of Med42-8B lives in `lora_finetune/`. It fine-tunes on answers distilled from the Claude + RAG chatbot and evaluates against the base model using the same LLM-as-judge as the rest of this repo. A first run (34 training examples) showed no statistically meaningful difference from the base model, consistent with too little training data to move an 8B model's behavior. See `lora_finetune/README.md` for the full status and the plan to scale up the training set before drawing a conclusion.
+- `lora_finetune/`: LoRA fine-tuning pipeline for Med42-8B - `run_pipeline.py` runs it end to end; see its own README for individual steps and current status
