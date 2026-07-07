@@ -161,7 +161,7 @@ class PatientChatbot:
         
         # LLM
         self.llm = ChatAnthropic(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5",
             temperature=0.7,
             api_key=os.getenv("ANTHROPIC_API_KEY")
         )
