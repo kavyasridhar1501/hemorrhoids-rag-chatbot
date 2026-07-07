@@ -25,13 +25,16 @@ class LoRAConfig:
 
     learning_rate: float = 2e-4
     num_train_epochs: int = 3
-    per_device_train_batch_size: int = 2
-    gradient_accumulation_steps: int = 8
-    max_seq_length: int = 1024
+    per_device_train_batch_size: int = 1
+    gradient_accumulation_steps: int = 16
+    max_seq_length: int = 512
     warmup_ratio: float = 0.03
     logging_steps: int = 10
     save_strategy: str = "epoch"
-    eval_strategy: str = "epoch"
+    # In-training eval switches the model between train/eval mode each epoch,
+    # which adds memory churn on top of an already-tight T4 budget - skip it
+    # here and rely on evaluate_lora.py for the real base-vs-LoRA comparison.
+    eval_strategy: str = "no"
 
     train_file: str = "lora_finetune/data/train.jsonl"
     val_file: str = "lora_finetune/data/val.jsonl"
