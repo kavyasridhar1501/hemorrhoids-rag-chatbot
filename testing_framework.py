@@ -476,8 +476,9 @@ Be thorough in your reasoning and specific in identifying issues."""
                 }]
             )
             
-            # Extract JSON from response
-            response_text = message.content[0].text
+            # Extract JSON from response - content[0] may be a ThinkingBlock,
+            # so find the actual text block rather than assuming position 0
+            response_text = next(block.text for block in message.content if block.type == "text")
             
             # Find JSON in markdown code blocks
             import re
