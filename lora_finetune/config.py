@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List
 
+import torch
+
 
 @dataclass
 class LoRAConfig:
@@ -16,6 +18,10 @@ class LoRAConfig:
     ])
 
     load_in_4bit: bool = True
+    # T4 (free-tier Colab) is Turing architecture and has no bf16 support -
+    # use float16 there. Switch to "bfloat16" on Ampere+ (A100/3090/4090/L4).
+    compute_dtype: str = "float16"
+    gradient_checkpointing: bool = True
 
     learning_rate: float = 2e-4
     num_train_epochs: int = 3
@@ -30,3 +36,7 @@ class LoRAConfig:
     train_file: str = "lora_finetune/data/train.jsonl"
     val_file: str = "lora_finetune/data/val.jsonl"
     seed: int = 42
+
+    @property
+    def torch_dtype(self) -> torch.dtype:
+        return getattr(torch, self.compute_dtype)

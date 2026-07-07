@@ -37,11 +37,12 @@ def main():
     base_gen = Med42Generator(adapter_path=None, cfg=cfg)
     base_responses = run_variant(base_gen, test_cases, "base Med42-8B")
     base_eval = evaluator.batch_evaluate(test_cases, base_responses)
-    del base_gen
+    base_gen.unload()
 
     lora_gen = Med42Generator(adapter_path=cfg.output_dir, cfg=cfg)
     lora_responses = run_variant(lora_gen, test_cases, "LoRA Med42-8B")
     lora_eval = evaluator.batch_evaluate(test_cases, lora_responses)
+    lora_gen.unload()
     del lora_gen
 
     comparison = {

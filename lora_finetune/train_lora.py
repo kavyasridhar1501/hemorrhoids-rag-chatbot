@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import List
 
-import torch
 from datasets import Dataset
 from transformers import (
     AutoModelForCausalLM,
@@ -61,7 +60,7 @@ def main():
     quant_config = BitsAndBytesConfig(
         load_in_4bit=cfg.load_in_4bit,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=cfg.torch_dtype,
         bnb_4bit_use_double_quant=True,
     )
 
@@ -69,9 +68,11 @@ def main():
         cfg.base_model,
         quantization_config=quant_config if cfg.load_in_4bit else None,
         device_map="auto",
-        torch_dtype=torch.bfloat16,
+        torch_dtype=cfg.torch_dtype,
     )
-    model = prepare_model_for_kbit_training(model)
+    model = prepare_model_for_kbit_training(
+        model, use_gradient_checkpointing=cfg.gradient_checkpointing
+    )
 
     peft_config = PeftLoraConfig(
         r=cfg.lora_r,
@@ -101,7 +102,8 @@ def main():
         logging_steps=cfg.logging_steps,
         save_strategy=cfg.save_strategy,
         eval_strategy=cfg.eval_strategy if val_dataset is not None else "no",
-        bf16=True,
+        fp16=cfg.compute_dtype == "float16",
+        bf16=cfg.compute_dtype == "bfloat16",
         report_to=[],
         seed=cfg.seed,
     )

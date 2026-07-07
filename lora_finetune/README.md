@@ -30,6 +30,29 @@ The base model is gated on Hugging Face; set `HF_TOKEN` (and accept the
 model license on its model card) if `from_pretrained` fails with an auth
 error.
 
+### Running on Google Colab (free tier)
+A free-tier T4 (16GB VRAM) should fit this, with two things to know:
+
+- **T4 is Turing, not Ampere — it has no `bfloat16` support.** `config.py`
+  defaults `compute_dtype` to `"float16"` for exactly this reason. Only
+  switch it to `"bfloat16"` if you're on an A100/L4/3090/4090 (Colab Pro
+  or your own box).
+- `gradient_checkpointing` is on by default in `config.py` — needed to fit
+  the activation memory of an 8B model on 16GB. If you still hit an OOM,
+  drop `per_device_train_batch_size` to 1 and/or `max_seq_length` to 512-768
+  in `config.py` (raise `gradient_accumulation_steps` to compensate).
+
+Also note: `evaluate_lora.py` loads the base model and the LoRA-adapted
+model one after another in the same process and calls `.unload()` between
+them to free VRAM — if you adapt it into a notebook, keep that pattern (or
+restart the runtime between the two) rather than holding both in memory
+at once.
+
+Mount time and GPU availability aren't guaranteed on the free tier, but
+given how small this project's dataset is (the curated + scraped test
+cases, well under a thousand examples), a few epochs of training and the
+eval pass should each finish in well under an hour once a GPU is assigned.
+
 ## Steps
 
 1. **Build the training data** (needs `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
