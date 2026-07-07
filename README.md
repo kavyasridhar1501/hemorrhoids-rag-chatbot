@@ -13,7 +13,7 @@ A patient-friendly RAG chatbot focused on hemorrhoids and constipation. It provi
 
 ### Tech Stack
 - LLM: Claude (primary); Med42-8B via Ollama for comparison
-- RAG: LangChain + FAISS + OpenAI embeddings
+- RAG: LangChain + FAISS + local HuggingFace embeddings (`sentence-transformers/all-MiniLM-L6-v2`, no API key/cost)
 - Evaluation: Custom test runner, LLM-as-judge (Claude), optional human/doctor scoring
 
 ---
@@ -29,12 +29,12 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 ```
 ANTHROPIC_API_KEY=your_anthropic_key
-OPENAI_API_KEY=your_openai_key               # for embeddings
 # Optional patient context via Supabase
 SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 HEMS_USER_ID=...                              # optional demo patient ID
 ```
+Embeddings run locally (`sentence-transformers/all-MiniLM-L6-v2`) — no OpenAI key needed.
 
 ### 3) Prepare documents and build the vectorstore
 Add PDFs/TXT/MD/CSV/HTML to `documents/`, then run:

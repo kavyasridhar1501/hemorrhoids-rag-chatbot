@@ -1,4 +1,5 @@
 """Shared helper for generating responses with base or LoRA-adapted Med42-8B."""
+import gc
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ class Med42Generator:
         quant_config = BitsAndBytesConfig(
             load_in_4bit=self.cfg.load_in_4bit,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_compute_dtype=self.cfg.torch_dtype,
             bnb_4bit_use_double_quant=True,
         )
 
@@ -27,10 +28,16 @@ class Med42Generator:
             self.cfg.base_model,
             quantization_config=quant_config if self.cfg.load_in_4bit else None,
             device_map="auto",
-            torch_dtype=torch.bfloat16,
+            torch_dtype=self.cfg.torch_dtype,
         )
         self.model = PeftModel.from_pretrained(base_model, adapter_path) if adapter_path else base_model
         self.model.eval()
+
+    def unload(self):
+        """Release GPU memory - call before loading another Med42Generator in the same process."""
+        del self.model
+        gc.collect()
+        torch.cuda.empty_cache()
 
     @torch.inference_mode()
     def generate(self, question: str, max_new_tokens: int = 512) -> str:
