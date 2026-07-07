@@ -465,7 +465,7 @@ Be thorough in your reasoning and specific in identifying issues."""
         
         try:
             message = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-5",
                 max_tokens=4000,
                 temperature=0.2,  # Lower for more consistent evaluation
                 messages=[{
