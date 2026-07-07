@@ -22,8 +22,11 @@ from config import LoRAConfig
 
 
 def collect_questions() -> List[Dict]:
-    cases = TestCaseGenerator.get_curated_test_cases()
-    for filename in ["forum_test_cases.json", "google_test_cases.json", "manual_test_cases.json"]:
+    # Deliberately excludes TestCaseGenerator.get_curated_test_cases() - those
+    # 16 questions are the held-out set evaluate_lora.py scores against, and
+    # must never appear in training data or the comparison is contaminated.
+    cases = []
+    for filename in ["forum_test_cases.json", "google_test_cases.json", "manual_test_cases.json", "synthetic_test_cases.json"]:
         cases += TestCaseGenerator.load_forum_cases(f"test_data/{filename}")
 
     seen = set()
