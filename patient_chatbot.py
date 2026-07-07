@@ -147,20 +147,21 @@ def format_chat_history(messages: List[Dict]) -> List:
     return formatted
 
 class PatientChatbot:
-    def __init__(self, vectorstore, patient_id: str):
+    def __init__(self, vectorstore, patient_id: str, llm=None):
         self.patient_id = patient_id
         self.vectorstore = vectorstore
-        
+
         # Memory
         self.memory = ConversationMemory()
         self.memory.start_conversation(patient_id)
         self.recent_context = self.memory.get_recent_context(patient_id, max_messages=6)
-        
+
         # Retriever
         self.retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
-        
-        # LLM
-        self.llm = ChatAnthropic(
+
+        # LLM - defaults to Claude; callers (e.g. lora_finetune scripts) may
+        # inject a different chat model to avoid Anthropic API cost
+        self.llm = llm or ChatAnthropic(
             model="claude-sonnet-5",
             api_key=os.getenv("ANTHROPIC_API_KEY")
         )

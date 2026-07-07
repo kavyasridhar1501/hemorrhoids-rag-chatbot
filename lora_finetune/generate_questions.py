@@ -1,6 +1,7 @@
 """
-Generates a larger, diverse synthetic patient-question set via Claude to scale
-up the LoRA training data beyond the small curated + scraped question pool.
+Generates a larger, diverse synthetic patient-question set via Gemini (free
+tier) to scale up the LoRA training data beyond the small curated + scraped
+question pool.
 
 Output matches the schema TestCaseGenerator.load_forum_cases() already reads
 (test_data/*.json with a "questions" list), so prepare_dataset.py picks this
@@ -12,8 +13,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
 from dotenv import load_dotenv
+from google import genai
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 load_dotenv()
@@ -50,24 +51,20 @@ Guidelines:
 
 
 def generate_category_questions(client, category: str, n: int) -> list:
-    message = client.messages.create(
-        model="claude-sonnet-5",
-        max_tokens=2000,
-        messages=[{
-            "role": "user",
-            "content": GENERATION_PROMPT.format(
-                n=n, category=category,
-                description=CATEGORY_DESCRIPTIONS[category],
-            ),
-        }],
+    result = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=GENERATION_PROMPT.format(
+            n=n, category=category,
+            description=CATEGORY_DESCRIPTIONS[category],
+        ),
     )
-    text = next(block.text for block in message.content if block.type == "text")
+    text = result.text
     json_str = text[text.find("["):text.rfind("]") + 1]
     return json.loads(json_str)
 
 
 def main():
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
     questions = []
     for category in CATEGORY_DESCRIPTIONS:

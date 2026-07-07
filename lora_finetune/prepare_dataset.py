@@ -1,24 +1,31 @@
 """
 Builds instruction/response training pairs for LoRA fine-tuning of Med42-8B.
 
-Targets are distilled from the existing Claude + RAG chatbot (patient_chatbot.py):
-each patient question is answered by the production chatbot, and that answer
-becomes the training completion. This teaches Med42-8B to imitate Claude's
-safety-first, patient-friendly, red-flag-aware behavior on top of its own
-medical domain knowledge, rather than requiring a hand-labeled dataset.
+Targets are distilled from the existing RAG chatbot (patient_chatbot.py) with
+its LLM swapped to Gemini (free tier) instead of Claude: each patient question
+is answered by the RAG-grounded, safety-prompted chatbot, and that answer
+becomes the training completion. This teaches Med42-8B to imitate the
+teacher's safety-first, patient-friendly, red-flag-aware behavior on top of
+its own medical domain knowledge, rather than requiring a hand-labeled
+dataset.
 """
 import json
+import os
 import random
 import sys
 from pathlib import Path
 from typing import Dict, List
 
+from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 from transformers import AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from patient_chatbot import PatientChatbot, load_vectorstore, SYSTEM_PROMPT
 from test_runner import TestCaseGenerator
 from config import LoRAConfig
+
+load_dotenv()
 
 
 def collect_questions() -> List[Dict]:
@@ -41,7 +48,11 @@ def collect_questions() -> List[Dict]:
 
 def build_examples(tokenizer, vectorstore_path: str = "./faiss_index") -> List[Dict]:
     vectorstore = load_vectorstore(vectorstore_path)
-    chatbot = PatientChatbot(vectorstore, patient_id="lora_dataset_builder")
+    teacher_llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=os.getenv("GEMINI_API_KEY"),
+    )
+    chatbot = PatientChatbot(vectorstore, patient_id="lora_dataset_builder", llm=teacher_llm)
 
     examples = []
     for case in collect_questions():
@@ -74,7 +85,7 @@ def main():
 
     examples = build_examples(tokenizer)
     if not examples:
-        print("No examples generated - check ANTHROPIC_API_KEY and faiss_index/.")
+        print("No examples generated - check GEMINI_API_KEY and faiss_index/.")
         return
 
     random.Random(cfg.seed).shuffle(examples)
