@@ -467,7 +467,6 @@ Be thorough in your reasoning and specific in identifying issues."""
             message = self.client.messages.create(
                 model="claude-sonnet-5",
                 max_tokens=4000,
-                temperature=0.2,  # Lower for more consistent evaluation
                 messages=[{
                     "role": "user",
                     "content": self.evaluation_prompt.format(
