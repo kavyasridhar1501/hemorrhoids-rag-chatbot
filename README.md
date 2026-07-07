@@ -2,8 +2,6 @@
 
 A patient-friendly RAG chatbot focused on hemorrhoids and constipation. It provides empathetic guidance, detects red flags, and grounds answers in trusted medical sources (ACG, ASCRS, AGA). The system includes persistent conversation memory and a rigorous evaluation pipeline (LLM-as-judge + human/doctor review).
 
-![Architecture](images/architecture.png)
-
 ### Key Features
 - Patient-centered responses with safety-first behavior and red-flag escalation
 - Retrieval-Augmented Generation (RAG) over curated medical documents
@@ -52,14 +50,31 @@ python patient_chatbot.py
 ---
 
 ## Project Architecture
-High-level flow:
+
+**Knowledge base setup** (`rag_setup.py`):
+```
+Medical Documents  ->  Chunking          ->  Embeddings           ->  FAISS Vector Index
+(PDF/TXT/MD/DOCX)      (1000 chars,          (local sentence-          (stored on disk)
+                        200 overlap)          transformers)
+```
+
+**Q&A flow** (`patient_chatbot.py`):
+```
+User Question -> Retriever -> Prompt Builder -> LLM Response -> Safety Check -> Save Conversation
+                 (top-4        (system rules     (Claude /                     History
+                  chunks)       + retrieved        Med42-v2)
+                                 snippets +
+                                 conversation
+                                 history +
+                                 user question)
+```
+
 1. User asks a question
 2. Retriever fetches relevant chunks from FAISS
 3. Prompt composes: system safety policy + patient context + retrieved medical context + chat history
 4. LLM generates response (Claude by default)
-5. Red-flag post-processor appends urgent guidance if needed
-
-See `images/architecture.png` (add your diagram there).
+5. Safety check flags severe symptoms; red-flag post-processor appends urgent guidance if needed
+6. Conversation history is saved
 
 ---
 
@@ -102,9 +117,60 @@ Follow the prompts to:
 
 ## Results Summary
 
-![Results Summary](images/results-summary.png)
-![Pass Rates](images/pass-rates.png)
-![Red Flags vs Misses](images/red-flags-vs-misses.png)
+### Dimension scores (out of 10)
+
+**Claude (Sonnet)**
+
+| Dimension              | Human Evaluation | LLM-as-Judge |
+|-------------------------|:---:|:---:|
+| Medical Accuracy        | 8.71 | 9.12 |
+| Safety                  | 8.68 | 9.03 |
+| Patient-Friendliness    | 9.03 | 9.44 |
+| Actionability           | 9.00 | 9.31 |
+| Scope Appropriateness   | 8.89 | 9.27 |
+| **Total Score (Avg)**   | **8.86 / 10** | **9.23 / 10** |
+| **Percentage**          | **88.6%** | **92.3%** |
+
+**Med42-8B (Ollama)**
+
+| Dimension              | Human Evaluation | LLM-as-Judge |
+|-------------------------|:---:|:---:|
+| Medical Accuracy        | 7.11 | 8.02 |
+| Safety                  | 7.79 | 8.21 |
+| Patient-Friendliness    | 7.05 | 8.51 |
+| Actionability           | 7.34 | 8.42 |
+| Scope Appropriateness   | 7.89 | 8.49 |
+| **Total Score (Avg)**   | **7.44 / 10** | **8.33 / 10** |
+| **Percentage**          | **74.4%** | **83.3%** |
+
+### Pass rates: LLM-as-Judge vs. human/doctor review
+
+**Claude Model**
+
+| Verdict | Human | LLM Judge | Observation |
+|---|:---:|:---:|---|
+| PASS    | 29 | 35 | +6 extra passes |
+| REVISE  | 8  | 3  | Misses 5 |
+| FAIL    | 1  | 0  | Misses 1 |
+
+**Med42-8B Model**
+
+| Verdict | Human | LLM Judge | Observation |
+|---|:---:|:---:|---|
+| PASS    | 10 | 20 | +10 extra passes |
+| REVISE  | 17 | 17 | Same number but mismatched |
+| FAIL    | 11 | 1  | Misses 10 (91%!) |
+
+### LLM-as-judge reliability analysis
+
+| Metric | Claude Eval | Llama Eval | Interpretation |
+|---|:---:|:---:|---|
+| Score Correlation (LLM vs Human) | 0.18 | 0.20 | Weak agreement |
+| Verdict Match Rate | 74% | 34% | LLM mis-judges Llama heavily |
+| Average Over-scoring | +2.8 pts | +8.7 pts | LLM is overly generous, especially for Med42 |
+| PASS mis-classification | 8 cases | 17 cases | Many unsafe answers incorrectly marked PASS |
+
+The LLM-as-judge system **cannot be trusted alone**, especially for medical evaluation. It often overrates the Med42-8B outputs and marks unsafe responses as acceptable.
 
 Key findings:
 - Claude (RAG) consistently outperforms Med42-8B across all evaluation dimensions.
