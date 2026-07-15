@@ -30,20 +30,20 @@ class ResultsAnalyzer:
         print("="*80)
         
         s = self.summary
-        print(f"\n📊 Overall Performance:")
+        print(f"\nOverall Performance:")
         print(f"   Average Score: {s['average_score']:.1f}%")
         print(f"   Pass Rate: {s['pass_rate']:.1f}%")
         print(f"   Total Cases: {s['total_evaluated']}")
-        print(f"\n   ✓ Passed: {s['passes']}")
-        print(f"   ⚠ Needs Revision: {s['revisions_needed']}")
-        print(f"   ✗ Failed: {s['failures']}")
-        
-        print(f"\n📈 Dimension Scores (out of 10):")
+        print(f"\n   Passed: {s['passes']}")
+        print(f"   Needs Revision: {s['revisions_needed']}")
+        print(f"   Failed: {s['failures']}")
+
+        print(f"\nDimension Scores (out of 10):")
         for dim, score in s['dimension_averages'].items():
             status = "✓" if score >= 8 else "⚠" if score >= 6 else "✗"
             print(f"   {status} {dim}: {score:.1f}")
-        
-        print(f"\n📉 Score Distribution:")
+
+        print(f"\nScore Distribution:")
         for range_name, count in s['score_distribution'].items():
             print(f"   {range_name}: {count} cases")
     
@@ -270,7 +270,7 @@ def create_red_flag_warning(red_flags: List[str]) -> str:
         failures = self.find_failures()
         
         if not failures:
-            print("\n🎉 No failures! All test cases passed.")
+            print("\nNo failures. All test cases passed.")
             return
         
         print(f"\n{'='*80}")
@@ -294,7 +294,7 @@ def create_red_flag_warning(red_flags: List[str]) -> str:
         recommendations = self.generate_recommendations()
         
         if not recommendations:
-            print("\n✓ System performing well! No critical issues identified.")
+            print("\nSystem performing well. No critical issues identified.")
             return
         
         print(f"\n{'='*80}")
@@ -350,27 +350,20 @@ def create_red_flag_warning(red_flags: List[str]) -> str:
         with open(filename, 'w') as f:
             json.dump(plan, f, indent=2)
         
-        print(f"\n✓ Improvement plan exported to {filename}")
+        print(f"\nImprovement plan exported to {filename}")
 
 def main():
     """Run the analyzer"""
     try:
         analyzer = ResultsAnalyzer()
-        
-        # Print overview
+
         analyzer.print_overview()
-        
-        # Print detailed failures
         analyzer.print_detailed_failures()
-        
-        # Print recommendations
         analyzer.print_recommendations()
-        
-        # Export plan
         analyzer.export_improvement_plan()
-        
+
     except FileNotFoundError as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\nError: {e}")
         print("Run 'python test_runner.py' first to generate results")
 
 if __name__ == "__main__":

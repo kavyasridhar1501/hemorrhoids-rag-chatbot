@@ -13,9 +13,7 @@ import anthropic
 
 load_dotenv()
 
-# ============================================================================
-# PART 1: WEB FORUM SCRAPER FOR TEST CASES
-# ============================================================================
+# Web forum scraper for test cases
 
 import requests
 from bs4 import BeautifulSoup
@@ -99,8 +97,7 @@ class PatientForumScraper:
             
             response = self.session.get(base_url, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Find discussion threads
+
             discussions = soup.find_all('h3') or soup.find_all('a', class_='discussion-title')
             
             for disc in discussions[:max_questions]:
@@ -217,8 +214,7 @@ class PatientForumScraper:
                 
                 response = self.session.get(url, timeout=10)
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Find question elements
+
                 question_elements = soup.find_all('div', class_='question-text') or soup.find_all('p')
                 
                 for elem in question_elements[:max_questions//len(topics)]:
@@ -335,7 +331,7 @@ class PatientForumScraper:
                 'questions': questions
             }, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ Saved {len(questions)} questions to {filepath}")
+        print(f"\nSaved {len(questions)} questions to {filepath}")
         
         # Print summary by source
         sources = {}
@@ -355,9 +351,7 @@ class PatientForumScraper:
         for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
             print(f"  {cat}: {count}")
 
-# ============================================================================
-# PART 2: LLM-AS-JUDGE EVALUATOR WITH CHAIN-OF-THOUGHT
-# ============================================================================
+# LLM-as-judge evaluator with chain-of-thought
 
 class LLMJudgeEvaluator:
     """
@@ -532,8 +526,7 @@ Be thorough in your reasoning and specific in identifying issues."""
                 'response': response,
                 'evaluation': evaluation
             })
-        
-        # Calculate summary statistics
+
         summary = self._calculate_summary(results)
         
         return {
@@ -609,7 +602,7 @@ Be thorough in your reasoning and specific in identifying issues."""
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ Results saved to {filepath}")
+        print(f"\nResults saved to {filepath}")
         
         # Print summary
         summary = results['summary']
@@ -620,16 +613,14 @@ Be thorough in your reasoning and specific in identifying issues."""
         print(f"Average Score: {summary['average_score']:.1f}%")
         print(f"Pass Rate: {summary['pass_rate']:.1f}%")
         print(f"\nResults:")
-        print(f"  ✓ Pass: {summary['passes']}")
-        print(f"  ⚠ Needs Revision: {summary['revisions_needed']}")
-        print(f"  ✗ Fail: {summary['failures']}")
+        print(f"  Pass: {summary['passes']}")
+        print(f"  Needs Revision: {summary['revisions_needed']}")
+        print(f"  Fail: {summary['failures']}")
         print(f"\nDimension Averages:")
         for dim, score in summary['dimension_averages'].items():
             print(f"  {dim}: {score:.1f}/10")
 
-# ============================================================================
-# PART 3: HUMAN EVALUATION INTERFACE
-# ============================================================================
+# Human evaluation interface
 
 class HumanEvaluationInterface:
     """
@@ -673,8 +664,7 @@ class HumanEvaluationInterface:
                         print("Please enter a number between 1 and 5")
                 except ValueError:
                     print("Please enter a valid number")
-        
-        # Get overall assessment
+
         print("\n" + "-"*80)
         overall = input("Overall verdict (PASS/REVISE/FAIL): ").strip().upper()
         comments = input("Additional comments (optional): ").strip()
@@ -728,11 +718,8 @@ class HumanEvaluationInterface:
                 'results': results
             }, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ Human evaluations saved to {filepath}")
+        print(f"\nHuman evaluations saved to {filepath}")
 
-# ============================================================================
-# MAIN TESTING WORKFLOW
-# ============================================================================
 
 def main():
     """
@@ -761,7 +748,6 @@ def main():
         
     elif choice == '3':
         evaluator = HumanEvaluationInterface()
-        # Load test cases here
         print("\nLoad your test cases and responses first.")
         
     else:

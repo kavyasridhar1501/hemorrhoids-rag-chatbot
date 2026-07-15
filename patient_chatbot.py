@@ -26,10 +26,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 load_dotenv()
 
-# ============================================================================
-# SYSTEM PROMPT
-# ============================================================================
-
 SYSTEM_PROMPT = """You are a compassionate virtual assistant helping patients manage hemorrhoids and constipation at home.
 
 TONE: Warm, empathetic, conversational. Use simple language, validate feelings, normalize experiences.
@@ -86,10 +82,6 @@ TREATMENT GUIDELINES - Base advice on evidence from ACG, ASCRS, and AGA guidelin
 
 REMEMBER: Safety first. When in doubt, recommend medical evaluation."""
 
-# ============================================================================
-# RED FLAG DETECTION
-# ============================================================================
-
 RED_FLAG_PATTERNS = {
     'severe_pain': r'severe pain|excruciating|unbearable|extreme pain|terrible pain',
     'heavy_bleeding': r'heavy bleed|lots of blood|pouring|filling toilet|gushing|blood clot',
@@ -111,28 +103,22 @@ def create_red_flag_warning(red_flags: List[str]) -> str:
     """Create prominent, appropriate warnings based on severity"""
     if not red_flags:
         return ""
-    
+
     # Critical red flags that need ER/urgent care TODAY
     critical = {'heavy_bleeding', 'black_stool', 'severe_pain', 'dizziness'}
-    
+
     # Less urgent but still need doctor visit
     non_urgent = {'prolonged_constipation', 'fever'}
-    
+
     has_critical = any(flag in critical for flag in red_flags)
     has_non_urgent = any(flag in non_urgent for flag in red_flags)
-    
+
     if has_critical:
-        # CRITICAL: Very prominent warning
         return "\n\n" + "="*60 + "\n🚨 **URGENT MEDICAL ATTENTION NEEDED** 🚨\n" + "="*60 + "\n\nBased on your symptoms, you need to see a doctor TODAY. Go to urgent care or the emergency room if:\n- You're experiencing heavy bleeding\n- You have black or tarry stools\n- You feel dizzy or weak\n- You have severe pain\n\nThese could be signs of serious bleeding or other conditions that need immediate evaluation. Please don't wait."
     elif has_non_urgent:
-        # Non-urgent: Still clear but less alarming
         return "\n\n⚠️ **Please contact your doctor within 1-2 days:**\n\nThe symptoms you've described should be evaluated by your healthcare provider to make sure everything is okay and to adjust your treatment plan if needed."
-    
-    return ""
 
-# ============================================================================
-# CHATBOT CLASS
-# ============================================================================
+    return ""
 
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
@@ -150,22 +136,18 @@ class PatientChatbot:
     def __init__(self, vectorstore, patient_id: str):
         self.patient_id = patient_id
         self.vectorstore = vectorstore
-        
-        # Memory
+
         self.memory = ConversationMemory()
         self.memory.start_conversation(patient_id)
         self.recent_context = self.memory.get_recent_context(patient_id, max_messages=6)
-        
-        # Retriever
+
         self.retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
-        
-        # LLM
+
         self.llm = ChatAnthropic(
             model="claude-sonnet-5",
             api_key=os.getenv("ANTHROPIC_API_KEY")
         )
-        
-        # Prompt
+
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", SYSTEM_PROMPT),
             ("system", "Medical information to inform your response:\n{context}"),
@@ -173,8 +155,7 @@ class PatientChatbot:
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{question}")
         ])
-        
-        # Chain
+
         self.rag_chain = (
             {
                 "context": lambda x: format_docs(self.retriever.invoke(x["question"])),
@@ -206,13 +187,10 @@ class PatientChatbot:
             "question": user_message,
             "chat_history": current_session
         })
-        
-        # Clean up any duplicate warnings in the response
+
         response = self._deduplicate_warnings(response)
-        
-        # Add single warning at end if needed
+
         if red_flags:
-            # Only add if response doesn't already have a warning
             if not self._has_warning(response):
                 response += create_red_flag_warning(red_flags)
         
@@ -238,9 +216,8 @@ class PatientChatbot:
         """Remove duplicate warning statements from response"""
         # If there are multiple warning emoji, keep only the last one
         parts = response.split('⚠️')
-        
+
         if len(parts) > 2:  # More than one warning
-            # Keep everything before warnings, then add last warning
             main_content = parts[0]
             last_warning = '⚠️' + parts[-1]
             return main_content + '\n\n' + last_warning
@@ -253,21 +230,17 @@ class PatientChatbot:
     def get_patient_summary(self) -> Dict:
         return self.memory.get_conversation_summary(self.patient_id)
 
-# ============================================================================
-# MAIN
-# ============================================================================
-
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 def load_vectorstore(persist_directory: str = "./faiss_index"):
     print(f"Loading vector store from {persist_directory}...")
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vectorstore = FAISS.load_local(
-        persist_directory, 
-        embeddings, 
+        persist_directory,
+        embeddings,
         allow_dangerous_deserialization=True
     )
-    print("✓ Vector store loaded")
+    print("Vector store loaded")
     return vectorstore
 
 def main():
@@ -284,7 +257,7 @@ def main():
     try:
         vectorstore = load_vectorstore()
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\nError: {e}")
         print("Run 'python rag_setup.py' first to create the vectorstore.")
         return
     

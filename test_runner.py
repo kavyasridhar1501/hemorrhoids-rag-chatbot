@@ -9,15 +9,11 @@ from pathlib import Path
 from typing import List, Dict
 from dotenv import load_dotenv
 
-# Import your chatbot
 from patient_chatbot import load_vectorstore, PatientChatbot
 from testing_framework import LLMJudgeEvaluator, HumanEvaluationInterface
 
 load_dotenv()
 
-# ============================================================================
-# TEST CASE GENERATOR
-# ============================================================================
 
 class TestCaseGenerator:
     """
@@ -184,9 +180,6 @@ class TestCaseGenerator:
         
         return test_cases
 
-# ============================================================================
-# TEST RUNNER
-# ============================================================================
 
 class MedicalChatbotTestRunner:
     """
@@ -205,8 +198,6 @@ class MedicalChatbotTestRunner:
         print(f"\nGenerating responses for {len(test_cases)} test cases...")
         
         results = []
-        
-        # Create a fresh chatbot instance for testing
         chatbot = PatientChatbot(self.vectorstore, self.test_patient_id)
         
         for i, test_case in enumerate(test_cases, 1):
@@ -221,10 +212,10 @@ class MedicalChatbotTestRunner:
                     'generated_at': str(Path.cwd())
                 })
                 
-                print(f"  ✓ Response generated ({len(response)} chars)")
-                
+                print(f"  Response generated ({len(response)} chars)")
+
             except Exception as e:
-                print(f"  ✗ Error: {e}")
+                print(f"  Error: {e}")
                 results.append({
                     'test_case': test_case,
                     'response': None,
@@ -261,7 +252,7 @@ class MedicalChatbotTestRunner:
             print(f"  Loaded {len(forums)} forum cases")
         
         if not test_cases:
-            print("\n✗ No test cases loaded. Exiting.")
+            print("\nNo test cases loaded. Exiting.")
             return
         
         print(f"\nTotal test cases: {len(test_cases)}")
@@ -272,8 +263,6 @@ class MedicalChatbotTestRunner:
         print("="*80)
         
         response_results = self.generate_responses(test_cases)
-        
-        # Save responses
         self._save_responses(response_results)
         
         # 3. LLM-as-judge evaluation
@@ -331,11 +320,8 @@ class MedicalChatbotTestRunner:
                 'results': results
             }, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ Responses saved to {filepath}")
+        print(f"\nResponses saved to {filepath}")
 
-# ============================================================================
-# MAIN
-# ============================================================================
 
 def main():
     """Run testing"""

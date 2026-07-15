@@ -21,10 +21,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 # Suppress warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# Load environment variables
 load_dotenv()
 
-# Configuration
 DOCUMENTS_FOLDER = "./documents"
 FAISS_INDEX_PATH = "./faiss_index"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -78,10 +76,10 @@ def load_documents():
             
             documents = loader.load()
             all_documents.extend(documents)
-            print(f"  ✓ Loaded {len(documents)} page(s) from {doc_file.name}")
-            
+            print(f"  Loaded {len(documents)} page(s) from {doc_file.name}")
+
         except Exception as e:
-            print(f"  ✗ Error loading {doc_file.name}: {e}")
+            print(f"  Error loading {doc_file.name}: {e}")
             continue
     
     return all_documents
@@ -95,7 +93,7 @@ def chunk_documents(documents):
         separators=["\n\n", "\n", ". ", " ", ""]
     )
     chunks = splitter.split_documents(documents)
-    print(f"✓ Created {len(chunks)} chunks")
+    print(f"Created {len(chunks)} chunks")
     return chunks
 
 def create_vectorstore(force_rebuild=False):
@@ -110,18 +108,18 @@ def create_vectorstore(force_rebuild=False):
         print(f"Vectorstore already exists at {FAISS_INDEX_PATH}")
         response = input("Rebuild from scratch? (y/n): ").strip().lower()
         if response != 'y':
-            print("✓ Using existing vectorstore.")
+            print("Using existing vectorstore.")
             return
-    
+
     documents = load_documents()
     if not documents:
-        print("\n✗ No documents found. Please add documents to ./documents/ folder")
+        print("\nNo documents found. Please add documents to ./documents/ folder")
         return
-    
+
     chunks = chunk_documents(documents)
-    
+
     if not chunks:
-        print("\n✗ No chunks created. Check your documents.")
+        print("\nNo chunks created. Check your documents.")
         return
     
     print("\nCreating vector store (this may take a moment)...")
@@ -131,9 +129,9 @@ def create_vectorstore(force_rebuild=False):
     )
     
     vectorstore.save_local(FAISS_INDEX_PATH)
-    print(f"✓ Vector store saved to {FAISS_INDEX_PATH}")
+    print(f"Vector store saved to {FAISS_INDEX_PATH}")
     print("\n" + "="*60)
-    print("Setup Complete!")
+    print("Setup complete")
     print("="*60)
     print("\nYou can now run: python patient_chatbot.py")
 
