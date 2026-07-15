@@ -68,7 +68,7 @@ class ConversationMemory:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        print(f"✓ Conversation saved: {filename}")
+        print(f"Conversation saved: {filename}")
     
     def get_patient_history(self, patient_id: str) -> List[Dict]:
         """Get all conversations for a patient"""

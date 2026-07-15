@@ -61,7 +61,7 @@ class ManualQuestionCollector:
             'added_date': datetime.now().isoformat()
         })
         
-        print(f"\n✓ Added question #{len(self.questions)}")
+        print(f"\nAdded question #{len(self.questions)}")
         return True
     
     def batch_add_from_text(self, text_input: str):
@@ -79,7 +79,7 @@ class ManualQuestionCollector:
                 'added_date': datetime.now().isoformat()
             })
         
-        print(f"✓ Added {len(lines)} questions")
+        print(f"Added {len(lines)} questions")
     
     def _auto_categorize(self, text: str) -> str:
         """Automatically categorize based on keywords"""
@@ -108,7 +108,7 @@ class ManualQuestionCollector:
             with open(filepath, 'r') as f:
                 data = json.load(f)
                 self.questions = data.get('questions', [])
-                print(f"✓ Loaded {len(self.questions)} existing questions")
+                print(f"Loaded {len(self.questions)} existing questions")
         else:
             print("No existing questions found")
     
@@ -126,7 +126,7 @@ class ManualQuestionCollector:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ Saved {len(self.questions)} questions to {filepath}")
+        print(f"\nSaved {len(self.questions)} questions to {filepath}")
         
         # Show summary
         categories = {}
@@ -158,7 +158,7 @@ class ManualQuestionCollector:
         """Delete a question by index"""
         if 0 <= index < len(self.questions):
             deleted = self.questions.pop(index)
-            print(f"✓ Deleted: {deleted['title'][:50]}...")
+            print(f"Deleted: {deleted['title'][:50]}...")
         else:
             print("Invalid index")
 
@@ -257,7 +257,7 @@ def create_starter_file():
         })
     
     collector.save()
-    print("\n✓ Created starter file with 20 common patient questions!")
+    print("\nCreated starter file with 20 common patient questions")
     print("Run 'python manual_collection.py' to add more")
 
 if __name__ == "__main__":

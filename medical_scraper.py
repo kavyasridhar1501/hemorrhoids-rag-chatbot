@@ -55,10 +55,8 @@ class MedicalArticleScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
         
-        # Create output directory
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Metadata tracking
+
         self.metadata = {
             'download_date': datetime.now().isoformat(),
             'articles': []
@@ -160,7 +158,6 @@ class MedicalArticleScraper:
             soup = BeautifulSoup(response.text, 'html.parser')
             
             urls = []
-            # Try different selectors for Google results
             for result in soup.find_all(['div'], class_=['g', 'Gx5Zad']):
                 link = result.find('a', href=True)
                 if link:
@@ -171,23 +168,20 @@ class MedicalArticleScraper:
                     if url.startswith('http') and site_url in url:
                         urls.append(url)
             
-            # Also try citation tags
             for cite in soup.find_all('cite'):
                 url = cite.get_text()
                 if url.startswith('http'):
                     urls.append(url)
-            
-            return list(set(urls))[:num_results]  # Remove duplicates
-            
+
+            return list(set(urls))[:num_results]
+
         except Exception as e:
             print(f"    Error searching Google: {e}")
             return []
     
     def clean_text(self, text):
         """Clean extracted text"""
-        # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text)
-        # Remove multiple newlines
         text = re.sub(r'\n+', '\n', text)
         return text.strip()
     
@@ -195,17 +189,16 @@ class MedicalArticleScraper:
         """Extract article content from URL"""
         try:
             print(f"      Fetching URL...")
-            
-            # Check if it's a PDF or journal article
+
             if url.endswith('.pdf'):
-                print(f"      ⚠ PDF detected - skipping (download manually)")
+                print(f"      PDF detected - skipping (download manually)")
                 return None
-            
+
             # Check if it's a journal that typically blocks scraping
             blocked_domains = ['lww.com', 'journals.', 'article', 'fulltext']
             if any(domain in url for domain in blocked_domains):
-                print(f"      ⚠ Journal article detected - may require manual access")
-                print(f"      → Visit URL directly to access: {url}")
+                print(f"      Journal article detected - may require manual access")
+                print(f"      Visit URL directly to access: {url}")
                 # Still try, but with different headers
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -221,25 +214,23 @@ class MedicalArticleScraper:
                 response = self.session.get(url, timeout=15)
             
             if response.status_code == 403:
-                print(f"      ✗ Access denied (403) - website blocking automated access")
-                print(f"      → Bookmark for manual download: {url}")
+                print(f"      Access denied (403) - website blocking automated access")
+                print(f"      Bookmark for manual download: {url}")
                 # Save to a separate list for manual download
                 self.blocked_urls.append(url)
                 return None
             elif response.status_code == 404:
-                print(f"      ✗ Not found (404)")
+                print(f"      Not found (404)")
                 return None
             elif response.status_code != 200:
-                print(f"      ✗ HTTP {response.status_code}")
+                print(f"      HTTP {response.status_code}")
                 return None
-            
+
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Remove script, style, nav, footer elements
+
             for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'iframe']):
                 element.decompose()
-            
-            # Try to find article title
+
             title = None
             for tag in ['h1', 'title']:
                 title_elem = soup.find(tag)
@@ -259,7 +250,6 @@ class MedicalArticleScraper:
             )
             
             if main_content:
-                # Extract paragraphs from main content
                 for p in main_content.find_all(['p', 'li', 'div'], recursive=True):
                     text = p.get_text().strip()
                     if len(text) > 30:  # Reduced threshold
@@ -272,14 +262,13 @@ class MedicalArticleScraper:
                     if len(text) > 30:
                         content_text.append(text)
             
-            # Combine content
             full_content = '\n\n'.join(content_text)
             word_count = len(full_content.split())
-            
+
             print(f"      Extracted {word_count} words")
-            
+
             if word_count < 50:
-                print(f"      ✗ Too short ({word_count} words)")
+                print(f"      Too short ({word_count} words)")
                 return None
             
             return {
@@ -290,31 +279,30 @@ class MedicalArticleScraper:
             }
             
         except requests.exceptions.Timeout:
-            print(f"      ✗ Timeout")
+            print(f"      Timeout")
             return None
         except requests.exceptions.RequestException as e:
-            print(f"      ✗ Request error: {e}")
+            print(f"      Request error: {e}")
             return None
         except Exception as e:
-            print(f"      ✗ Error: {e}")
+            print(f"      Error: {e}")
             return None
     
     def save_article(self, article_data, source_name, topic):
         """Save article to file"""
         if not article_data:
-            print(f"      ✗ No article data")
+            print(f"      No article data")
             return False
-            
+
         if not article_data['content']:
-            print(f"      ✗ Empty content")
+            print(f"      Empty content")
             return False
-        
+
         if article_data['word_count'] < 50:
-            print(f"      ✗ Too short ({article_data['word_count']} words)")
+            print(f"      Too short ({article_data['word_count']} words)")
             return False
-        
+
         try:
-            # Create sanitized filename
             safe_title = re.sub(r'[^\w\s-]', '', article_data['title'])[:50]
             safe_source = re.sub(r'[^\w\s-]', '', source_name)
             safe_topic = re.sub(r'[^\w\s-]', '', topic)
@@ -323,7 +311,6 @@ class MedicalArticleScraper:
             filename = f"{safe_source}_{safe_topic}_{timestamp}.txt"
             filepath = os.path.join(self.output_dir, filename)
             
-            # Write article
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(f"Title: {article_data['title']}\n")
                 f.write(f"Source: {source_name}\n")
@@ -333,8 +320,7 @@ class MedicalArticleScraper:
                 f.write(f"Downloaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write("="*80 + "\n\n")
                 f.write(article_data['content'])
-            
-            # Add to metadata
+
             self.metadata['articles'].append({
                 'filename': filename,
                 'title': article_data['title'],
@@ -344,21 +330,20 @@ class MedicalArticleScraper:
                 'word_count': article_data['word_count']
             })
             
-            print(f"      ✓ Saved: {article_data['title'][:50]}... ({article_data['word_count']} words)")
+            print(f"      Saved: {article_data['title'][:50]}... ({article_data['word_count']} words)")
             return True
-            
+
         except Exception as e:
-            print(f"      ✗ Save error: {e}")
+            print(f"      Save error: {e}")
             return False
-    
+
     def save_metadata(self):
         """Save metadata JSON file"""
         metadata_path = os.path.join(self.output_dir, 'metadata.json')
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(self.metadata, f, indent=2)
-        print(f"\n✓ Metadata saved to {metadata_path}")
-        
-        # Save blocked URLs to a separate file
+        print(f"\nMetadata saved to {metadata_path}")
+
         if self.blocked_urls:
             blocked_path = os.path.join(self.output_dir, 'blocked_urls.txt')
             with open(blocked_path, 'w', encoding='utf-8') as f:
@@ -366,7 +351,7 @@ class MedicalArticleScraper:
                 f.write("="*80 + "\n\n")
                 for url in self.blocked_urls:
                     f.write(f"{url}\n")
-            print(f"✓ Blocked URLs saved to {blocked_path}")
+            print(f"Blocked URLs saved to {blocked_path}")
             print(f"  ({len(self.blocked_urls)} URLs require manual download)")
     
     def scrape_all(self):
@@ -382,14 +367,13 @@ class MedicalArticleScraper:
             print(f"Searching: {source_name}")
             print(f"{'='*60}")
             
-            # First, try direct URLs if available
             direct_urls = self.get_direct_urls(source_name)
             
             if direct_urls:
                 print(f"  Using {len(direct_urls)} known URLs...")
                 
                 for url in direct_urls:
-                    print(f"\n    → {url}")
+                    print(f"\n    {url}")
                     article_data = self.extract_article_content(url)
                     
                     if article_data:
@@ -412,13 +396,11 @@ class MedicalArticleScraper:
                     # Be respectful with rate limiting
                     time.sleep(2)
             
-            # Then try web search as backup
             else:
                 print(f"  No direct URLs, trying web search...")
                 for topic in TOPICS[:2]:  # Limit topics for sources without direct URLs
                     print(f"\n    Topic: {topic}")
-                    
-                    # Search for URLs
+
                     urls = self.search_google_site(site_url, topic, num_results=2)
                     
                     if not urls:
@@ -426,8 +408,7 @@ class MedicalArticleScraper:
                         continue
                     
                     print(f"      Found {len(urls)} potential articles")
-                    
-                    # Download each article
+
                     for url in urls:
                         article_data = self.extract_article_content(url)
                         
@@ -440,8 +421,7 @@ class MedicalArticleScraper:
                     
                     # Longer pause between topics
                     time.sleep(3)
-        
-        # Save metadata
+
         self.save_metadata()
         
         print(f"\n{'='*60}")
