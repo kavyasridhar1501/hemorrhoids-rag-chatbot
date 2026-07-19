@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 load_dotenv()
 
-from extraction_schema import RED_FLAGS, FLAG_DESCRIPTIONS
+from extraction_schema import RED_FLAGS, FLAG_DESCRIPTIONS, is_fatal_account_error
 
 MESSAGES_PER_FLAG = 40
 ROUTINE_MESSAGES = 80
@@ -76,33 +76,58 @@ def main():
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     rng = random.Random(42)
     messages = []
+    stopped_early = False
+
+    def fatal(e: Exception) -> bool:
+        if is_fatal_account_error(e):
+            print(
+                f"\nFatal error: {e}\nThis looks like an account issue "
+                "(credits/auth) - stopping here instead of repeating the "
+                "same failure for every remaining category. Fix it and "
+                "re-run; already-generated categories will just be "
+                "regenerated (this script has no cache, unlike "
+                "prepare_extraction_dataset.py's labeling step)."
+            )
+            return True
+        return False
 
     for flag in RED_FLAGS:
+        if stopped_early:
+            break
         print(f"Generating {MESSAGES_PER_FLAG} messages for '{flag}'...")
         try:
             texts = call_claude(
                 client, FLAG_PROMPT.format(n=MESSAGES_PER_FLAG, description=FLAG_DESCRIPTIONS[flag])
             )
         except Exception as e:
+            if fatal(e):
+                stopped_early = True
+                break
             print(f"  Failed: {e}")
             continue
         for i, text in enumerate(texts, 1):
             messages.append({"id": f"{flag}_{i:03d}", "text": text.strip(), "target_category": flag})
         print(f"  +{len(texts)}")
 
-    print(f"Generating {ROUTINE_MESSAGES} routine messages...")
-    try:
-        texts = call_claude(client, ROUTINE_PROMPT.format(n=ROUTINE_MESSAGES))
-        for i, text in enumerate(texts, 1):
-            messages.append({"id": f"routine_{i:03d}", "text": text.strip(), "target_category": "routine"})
-        print(f"  +{len(texts)}")
-    except Exception as e:
-        print(f"  Failed: {e}")
+    if not stopped_early:
+        print(f"Generating {ROUTINE_MESSAGES} routine messages...")
+        try:
+            texts = call_claude(client, ROUTINE_PROMPT.format(n=ROUTINE_MESSAGES))
+            for i, text in enumerate(texts, 1):
+                messages.append({"id": f"routine_{i:03d}", "text": text.strip(), "target_category": "routine"})
+            print(f"  +{len(texts)}")
+        except Exception as e:
+            if fatal(e):
+                stopped_early = True
+            else:
+                print(f"  Failed: {e}")
 
     flag_pairs = list(zip(RED_FLAGS, RED_FLAGS[1:] + RED_FLAGS[:1]))
     rng.shuffle(flag_pairs)
     per_pair = max(1, MULTI_FLAG_MESSAGES // len(flag_pairs))
     for f1, f2 in flag_pairs:
+        if stopped_early:
+            break
         print(f"Generating {per_pair} multi-flag messages for '{f1}+{f2}'...")
         try:
             texts = call_claude(
@@ -120,6 +145,9 @@ def main():
                 })
             print(f"  +{len(texts)}")
         except Exception as e:
+            if fatal(e):
+                stopped_early = True
+                break
             print(f"  Failed: {e}")
 
     OUTPUT_PATH.parent.mkdir(exist_ok=True)
