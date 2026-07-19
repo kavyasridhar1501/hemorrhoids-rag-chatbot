@@ -14,6 +14,7 @@ Usage (from the repo root, after cloning):
 Requires ANTHROPIC_API_KEY and HF_TOKEN in the environment (.env or
 exported) and a CUDA GPU (T4 16GB minimum) for the train/evaluate steps.
 """
+import argparse
 import shutil
 import subprocess
 import sys
@@ -51,7 +52,27 @@ def build_vectorstore_if_missing():
     run(["python", "rag_setup.py"], "Building the RAG vectorstore")
 
 
-def main():
+def run_extraction_task():
+    """Scoped red-flag/triage JSON-extraction task - no RAG/vectorstore
+    dependency at all, since it's a direct classification task."""
+    run(["python", "lora_finetune/generate_extraction_questions.py"], "Generating class-balanced red-flag messages")
+    run(["python", "lora_finetune/prepare_extraction_dataset.py"], "Labeling + building extraction train/val data")
+    run(["python", "lora_finetune/train_lora.py", "--task", "extraction"], "Fine-tuning Med42-8B on red-flag extraction")
+    run(["python", "lora_finetune/evaluate_extraction.py"], "Evaluating base vs. LoRA on red-flag extraction")
+    print(
+        "\nPipeline complete.\n"
+        "  Adapter: lora_finetune/adapter_extraction/\n"
+        "  Results: test_results/lora_vs_base_extraction_results.json\n"
+        "\nHand-review lora_finetune/data/extraction_val_for_review.jsonl "
+        "before trusting those numbers - it's the eval set's labels in a "
+        "readable format.\n"
+        "\nIf running on an ephemeral environment (e.g. Colab), copy "
+        "lora_finetune/adapter_extraction/ somewhere durable now - it will "
+        "not survive a runtime restart."
+    )
+
+
+def run_chat_task():
     run(["python", "lora_finetune/generate_questions.py"], "Generating synthetic training questions")
     build_vectorstore_if_missing()
     run(["python", "lora_finetune/prepare_dataset.py"], "Building LoRA training data")
@@ -65,6 +86,20 @@ def main():
         "lora_finetune/adapter/ somewhere durable now - it will not "
         "survive a runtime restart."
     )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--task", choices=["chat", "extraction"], default="chat",
+        help="chat = free-text answer imitation (original pipeline, default); "
+             "extraction = scoped red-flag/triage JSON classification",
+    )
+    args = parser.parse_args()
+    if args.task == "extraction":
+        run_extraction_task()
+    else:
+        run_chat_task()
 
 
 if __name__ == "__main__":

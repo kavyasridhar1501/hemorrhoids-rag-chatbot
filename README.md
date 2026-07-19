@@ -50,15 +50,18 @@ python patient_chatbot.py
 - If the vectorstore is missing, run `rag_setup.py` first.
 
 ### 5) (Optional) Fine-tune Med42-8B with LoRA
-Distills the chatbot's answers into a training set and fine-tunes
-`m42-health/Llama3-Med42-8B` with LoRA, then benchmarks it against the base
-model. Needs a CUDA GPU (a free-tier Colab T4 is enough):
+Two fine-tuning tasks, both QLoRA on `m42-health/Llama3-Med42-8B`, and both
+need a CUDA GPU (a free-tier Colab T4 is enough):
 ```bash
+# Free-text: distills the Claude+RAG chatbot's answers into a training set
 python lora_finetune/run_pipeline.py
+
+# Scoped: red-flag/triage JSON extraction, scored deterministically
+# (precision/recall/F1) instead of by an LLM judge
+python lora_finetune/run_pipeline.py --task extraction
 ```
-Runs the full sequence end to end. See `lora_finetune/README.md` for the
-individual steps, hyperparameters, and current results if you'd rather run
-it piece by piece.
+See `lora_finetune/README.md` for the individual steps, hyperparameters,
+and current results if you'd rather run it piece by piece.
 
 ---
 

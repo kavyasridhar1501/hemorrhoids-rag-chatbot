@@ -16,8 +16,9 @@ from config import LoRAConfig
 
 
 class Med42Generator:
-    def __init__(self, adapter_path: str = None, cfg: LoRAConfig = None):
+    def __init__(self, adapter_path: str = None, cfg: LoRAConfig = None, system_prompt: str = None):
         self.cfg = cfg or LoRAConfig()
+        self.system_prompt = system_prompt or SYSTEM_PROMPT
 
         quant_config = BitsAndBytesConfig(
             load_in_4bit=self.cfg.load_in_4bit,
@@ -46,7 +47,7 @@ class Med42Generator:
     def generate(self, question: str, max_new_tokens: int = 512) -> str:
         prompt = self.tokenizer.apply_chat_template(
             [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": question},
             ],
             tokenize=False,
