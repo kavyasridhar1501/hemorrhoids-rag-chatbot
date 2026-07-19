@@ -37,7 +37,7 @@ FLAG_DESCRIPTIONS = {
 EXTRACTION_SYSTEM_PROMPT = f"""You are a medical triage classifier for a hemorrhoids/constipation patient chatbot.
 
 Given a patient's message, identify which of these red-flag symptoms are present, then output ONLY compact JSON (no markdown, no other text) matching this schema:
-{{"red_flags": [<subset of {RED_FLAGS}>], "urgency": "<emergency|see_doctor_soon|routine>", "reasoning": "<one short sentence>"}}
+{{"red_flags": [<subset of {RED_FLAGS}>], "urgency": "<emergency|see_doctor_soon|routine>", "reasoning": "<one short sentence, under 15 words>"}}
 
 Red flag definitions:
 {chr(10).join(f"- {flag}: {desc}" for flag, desc in FLAG_DESCRIPTIONS.items())}
@@ -57,6 +57,18 @@ def urgency_from_flags(flags: List[str]) -> str:
     if flagset & NON_URGENT_FLAGS:
         return "see_doctor_soon"
     return "routine"
+
+
+def is_fatal_account_error(e: Exception) -> bool:
+    """Billing/auth errors from the Anthropic API won't resolve on retry -
+    callers should stop the whole run instead of skipping every remaining
+    call with the same error."""
+    status = getattr(e, "status_code", None)
+    if status in (401, 403):
+        return True
+    if status == 400 and "credit balance" in str(e).lower():
+        return True
+    return False
 
 
 def extract_json(text: str) -> Dict:
