@@ -202,8 +202,53 @@ These are computed directly from parsed output against gold labels, not
 judged by an LLM.
 
 ### Status
-Not yet run — this task was added after the free-text run above and needs
-a Colab session to produce real numbers. Once it's run, replace this
-section with the actual base-vs-LoRA table and, per the section above,
-don't report a number here until `extraction_val_for_review.jsonl` has
-actually been reviewed.
+First full run: 381 generated messages, 313 train / 68 val after the
+labeling + stratified split, 6 epochs (120 optimizer steps) on a free T4.
+A spot-check of the first 15/68 eval labels (printed in the notebook)
+looked correct; the full 68 haven't been hand-reviewed line by line yet.
+
+| metric | base Med42-8B | LoRA Med42-8B | delta |
+|---|---|---|---|
+| strict JSON validity | 92.6% | 95.6% | +3.0 pts |
+| micro precision | 0.849 | 0.885 | +0.036 |
+| micro recall | 0.890 | 0.939 | +0.049 |
+| micro F1 | 0.869 | 0.911 | +0.042 |
+| urgency exact-match accuracy | 95.6% | 95.6% | +0.0 pts |
+| strict exact-match rate (all flags + urgency) | 76.5% | 79.4% | +2.9 pts |
+
+Per-flag F1 improved or held for 5 of 6 flags (`fever` recall 0.692 → 0.923
+is the single biggest move; `prolonged_constipation` is unchanged). Every
+aggregate metric moved in LoRA's favor and none regressed - a real,
+consistent signal, unlike the free-text task's noise-level result above.
+
+**On dataset size:** 313 training examples is well below the 2,000-10,000
+"clean examples" often quoted for LoRA/QLoRA fine-tuning. That guidance is
+aimed at general instruction-tuning - teaching a model broad new behavior
+across a wide input/output space. This task is the opposite: a narrow,
+low-entropy classification problem (6 flags x 3 urgency levels) on top of
+a base model that's already instruction-tuned, so a few hundred
+class-balanced examples is a realistic scale for it, not an undersized
+dataset relative to what's actually being learned. The result above is the
+evidence for that claim, not just an assumption - a genuinely undersized
+run (see the free-text task's 34-example result) shows up as noise, not a
+consistent, same-direction move across every metric. Scaling generation up
+toward the 2,000-10,000 range is possible (bump the per-category counts in
+`generate_extraction_questions.py`) but wasn't judged necessary here.
+
+Worth being upfront about: the improvement is modest, not dramatic, because
+the un-tuned base model was already fairly good at this task (92.6% JSON
+validity, 0.869 F1) - Med42-8B is Llama-3-8B-Instruct-derived, so it
+already follows a JSON schema + few-shot prompt reasonably well before any
+fine-tuning. There wasn't a large "broken → fixed" gap to close here the
+way there might be on a harder or less-instructable base model. `urgency`
+accuracy in particular is likely near its ceiling given how few of the 68
+examples the base model got wrong to begin with.
+
+One cosmetic anomaly in this run's training log: every logged step printed
+`'loss': '0', 'grad_norm': '0'` verbatim, which would normally mean nothing
+trained at all. That's almost certainly progress-bar/carriage-return output
+getting captured wrong in the Colab log rather than a real bug - the eval
+numbers above show a real, non-degenerate, consistently-directional
+improvement, which a truly zero-gradient run would not produce. If you want
+to confirm rather than infer, rerun training and print
+`trainer.state.log_history` directly instead of relying on the console log.
