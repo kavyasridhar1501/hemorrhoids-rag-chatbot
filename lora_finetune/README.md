@@ -221,6 +221,20 @@ is the single biggest move; `prolonged_constipation` is unchanged). Every
 aggregate metric moved in LoRA's favor and none regressed - a real,
 consistent signal, unlike the free-text task's noise-level result above.
 
+**On dataset size:** 313 training examples is well below the 2,000-10,000
+"clean examples" often quoted for LoRA/QLoRA fine-tuning. That guidance is
+aimed at general instruction-tuning - teaching a model broad new behavior
+across a wide input/output space. This task is the opposite: a narrow,
+low-entropy classification problem (6 flags x 3 urgency levels) on top of
+a base model that's already instruction-tuned, so a few hundred
+class-balanced examples is a realistic scale for it, not an undersized
+dataset relative to what's actually being learned. The result above is the
+evidence for that claim, not just an assumption - a genuinely undersized
+run (see the free-text task's 34-example result) shows up as noise, not a
+consistent, same-direction move across every metric. Scaling generation up
+toward the 2,000-10,000 range is possible (bump the per-category counts in
+`generate_extraction_questions.py`) but wasn't judged necessary here.
+
 Worth being upfront about: the improvement is modest, not dramatic, because
 the un-tuned base model was already fairly good at this task (92.6% JSON
 validity, 0.869 F1) - Med42-8B is Llama-3-8B-Instruct-derived, so it
