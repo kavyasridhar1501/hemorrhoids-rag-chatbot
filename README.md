@@ -198,6 +198,34 @@ Key findings:
 - LLM-as-judge regularly overestimates Med42-8B’s quality and misses failures.
 - Automated judging can support quick screening but cannot replace human review.
 
+### LoRA fine-tuning results (red-flag/triage extraction)
+
+Scoped task (see `lora_finetune/README.md`): fine-tune Med42-8B to extract
+`{red_flags, urgency, reasoning}` JSON from a patient message, scored
+deterministically against a held-out, Claude-labeled eval set (68 examples)
+rather than by an LLM judge.
+
+| metric | base Med42-8B | LoRA Med42-8B | delta |
+|---|:---:|:---:|:---:|
+| strict JSON validity | 92.6% | 95.6% | +3.0 pts |
+| micro F1 (red-flag detection) | 0.869 | 0.911 | +0.042 |
+| urgency exact-match accuracy | 95.6% | 95.6% | +0.0 pts |
+| strict exact-match rate (all flags + urgency) | 76.5% | 79.4% | +2.9 pts |
+
+Trained on 313 examples (381 generated, class-balanced across the 6 red
+flags + routine + multi-flag cases) for 6 epochs on a free Colab T4. Every
+metric moved in LoRA's favor with no regressions — a real, consistent
+signal. The gain is modest rather than dramatic because the un-tuned base
+model was already fairly capable at this task (Med42-8B is
+Llama-3-8B-Instruct-derived), so there wasn't a large "broken → fixed" gap
+to close. Full per-flag breakdown and discussion in
+`lora_finetune/README.md`.
+
+An earlier, unscoped task (fine-tuning Med42-8B to imitate the full
+free-text Claude+RAG answer rather than a fixed-schema extraction) came
+back statistically indistinguishable from the base model — see the same
+file for why, and why the scoped task above exists as a result.
+
 ---
 
 ## Repository Guide
