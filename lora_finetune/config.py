@@ -43,3 +43,23 @@ class LoRAConfig:
     @property
     def torch_dtype(self) -> torch.dtype:
         return getattr(torch, self.compute_dtype)
+
+
+@dataclass
+class ExtractionLoRAConfig(LoRAConfig):
+    """Config for the scoped red-flag/triage JSON-extraction task (see
+    extraction_schema.py) instead of free-text chatbot-answer imitation.
+
+    Completions are a few dozen tokens of compact JSON rather than a full
+    paragraph, so max_seq_length shrinks and the effective batch can grow -
+    both make each optimizer step cheaper, so more of them fit in a T4
+    session than the free-text task's ~9 total steps did.
+    """
+    output_dir: str = "lora_finetune/adapter_extraction"
+    max_seq_length: int = 256
+    per_device_train_batch_size: int = 2
+    gradient_accumulation_steps: int = 8
+    num_train_epochs: int = 6
+
+    train_file: str = "lora_finetune/data/extraction_train.jsonl"
+    val_file: str = "lora_finetune/data/extraction_val.jsonl"

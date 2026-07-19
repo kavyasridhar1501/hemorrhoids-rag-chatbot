@@ -111,7 +111,7 @@ want more control:
    so it can be converted to GGUF for Ollama, the same way the base
    Med42-8B is served elsewhere in this project.
 
-## Status
+## Status (free-text task)
 First full run (34 train / 4 val examples, 3 epochs, ~9 optimizer steps
 total) completed but was inconclusive: LoRA scored within ~1 point of the
 base model (71.6% vs 70.8%, identical 12.5% pass rate) — a difference small
@@ -126,3 +126,84 @@ confirmed to complete cleanly - re-run `python lora_finetune/run_pipeline.py`
 end to end and check `test_results/lora_vs_base_results.json` for a result
 that can actually be attributed to the larger dataset before reporting a
 number anywhere.
+
+This diffuse "imitate the whole free-text answer" task is also just a hard
+one to move with a handful of LoRA steps - see the scoped task below, which
+exists specifically to fix that.
+
+## Scoped task: red-flag/triage JSON extraction
+
+Instead of imitating Claude's full free-text answer, this task fine-tunes
+Med42-8B to extract a small, fixed-schema JSON object from a patient
+message:
+```json
+{"red_flags": ["heavy_bleeding", "dizziness"], "urgency": "emergency", "reasoning": "..."}
+```
+using the same flag taxonomy and critical/non-urgent grouping as
+`patient_chatbot.py`'s regex-based `RED_FLAG_PATTERNS` /
+`create_red_flag_warning` (see `extraction_schema.py`). A model that does
+this reliably is a direct upgrade path for that regex logic, not just a
+benchmark exercise.
+
+**Why a separate task from the one above:** free-text generation is a huge,
+high-entropy output space - a handful of LoRA steps can't visibly shift it,
+which is exactly why the run above came back as noise. A 6-flag-set +
+3-class JSON target is a small, low-entropy space that a few hundred
+examples and a few epochs can actually move, and - critically - it can be
+**scored deterministically** (precision/recall/F1, JSON-validity rate)
+instead of relying on a 16-question LLM judge where a ~1-point difference
+is meaningless.
+
+### Data pipeline (two-stage, deliberately decoupled)
+1. `generate_extraction_questions.py` — generates a *class-balanced* set of
+   patient messages via Claude: ~40 per red flag, 80 routine (no red flags
+   at all), and multi-flag combinations (~60), written to
+   `test_data/extraction_messages.json`. Class balance matters here more
+   than in the free-text task - without it the model just learns to always
+   predict "routine".
+2. `prepare_extraction_dataset.py` — labels each message with a **separate,
+   blind** Claude call (the labeling prompt never sees which flag a message
+   was generated for) using the same schema/few-shot format the fine-tuned
+   model is trained to produce. This avoids label leakage from the
+   generation step. Builds a stratified train/val split (every flag and
+   urgency level represented in both) and writes
+   `lora_finetune/data/extraction_{train,val}.jsonl`, plus
+   `extraction_val_for_review.jsonl` - a human-readable dump of the eval
+   set's labels. **Hand-review that file before trusting
+   `evaluate_extraction.py`'s numbers** - a Claude-labeled eval set is only
+   as trustworthy as the labeler, and this one hasn't been manually
+   verified yet.
+
+No RAG/vectorstore step is needed for this task at all (unlike the
+free-text task) — it's a direct classification task over the raw patient
+message, not a retrieval-augmented answer.
+
+### Run it
+```bash
+python lora_finetune/run_pipeline.py --task extraction
+```
+or step by step:
+```bash
+python lora_finetune/generate_extraction_questions.py
+python lora_finetune/prepare_extraction_dataset.py
+python lora_finetune/train_lora.py --task extraction
+python lora_finetune/evaluate_extraction.py
+```
+Uses `ExtractionLoRAConfig` in `config.py` (shorter `max_seq_length=256`
+since completions are compact JSON, not paragraphs; more epochs since each
+step is cheaper). Adapter saves to `lora_finetune/adapter_extraction/`,
+results to `test_results/lora_vs_base_extraction_results.json`.
+
+### Metrics reported
+For base vs. LoRA Med42-8B: strict JSON-validity rate, micro-averaged
+flag precision/recall/F1 (plus per-flag breakdown), urgency-level exact-
+match accuracy, and strict exact-match rate (all flags + urgency correct).
+These are computed directly from parsed output against gold labels, not
+judged by an LLM.
+
+### Status
+Not yet run — this task was added after the free-text run above and needs
+a Colab session to produce real numbers. Once it's run, replace this
+section with the actual base-vs-LoRA table and, per the section above,
+don't report a number here until `extraction_val_for_review.jsonl` has
+actually been reviewed.

@@ -2,6 +2,7 @@
 LoRA fine-tuning of Med42-8B on the distilled patient Q&A pairs from
 prepare_dataset.py. Requires a CUDA GPU (bitsandbytes 4-bit quantization).
 """
+import argparse
 import json
 import os
 from pathlib import Path
@@ -20,7 +21,7 @@ from transformers import (
 )
 from peft import LoraConfig as PeftLoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-from config import LoRAConfig
+from config import LoRAConfig, ExtractionLoRAConfig
 
 
 def load_jsonl(path: str) -> List[dict]:
@@ -54,7 +55,14 @@ def build_dataset(path, tokenizer, max_length):
 
 
 def main():
-    cfg = LoRAConfig()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--task", choices=["chat", "extraction"], default="chat",
+        help="chat = free-text answer imitation (original pipeline, default); "
+             "extraction = scoped red-flag/triage JSON classification",
+    )
+    args = parser.parse_args()
+    cfg = ExtractionLoRAConfig() if args.task == "extraction" else LoRAConfig()
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.base_model)
     if tokenizer.pad_token is None:
